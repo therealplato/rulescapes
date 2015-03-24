@@ -24,6 +24,10 @@ app.post('/writeRule', function(req, res){
   })
 })
 
+rulescape.listRules(function(rules){
+  console.log(rules);
+})
+
 require('http')
 .createServer(app)
 .listen(3001)

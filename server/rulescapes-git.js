@@ -4,11 +4,6 @@ var fs = require('fs');
 var RUN = require('child_process').exec;
 var strf = require('util').format;
 
-
-function wrapPipes(fn){
-
-}
-
 module.exports = self = {
   /* Top level calls: DIY grunt */
   createRule: function(rule, callback){
@@ -18,7 +13,6 @@ module.exports = self = {
         next(null, opts)
       },
       self.hashRule,
-      //self.ensureRuleDir,
       self.writeRuleFile,
       self.gitInitRules,
       self.gitAddRules,
@@ -40,9 +34,38 @@ module.exports = self = {
       self.gitAddRules,
       function(opts, next){
         opts.commitMsg = 'Edit; New: '+opts.hash;
+        next(null, opts);
       },
       self.gitCommitRules,
     ], callback)
+  },
+
+  listRules: function(callback){
+    RUN('ls -1 *.rule', {cwd: '../rules/'}, function(err, stdout, stderr){
+      // trim stdout whitespace:
+      stdout = stdout.replace(/^\s+/, '').replace(/\s+$/, '');
+      var filenames = stdout.split('/n');
+      var collection = [];
+
+      async.eachSeries(filenames, collectFile, function(err){
+        callback(err, collection);
+      });
+
+      function collectFile(filename, done){
+        fs.readFile(filename, {encoding: 'utf8'}, function(err, data){
+          if(err){ return done(err)};
+          collection.push({
+            filename: filename,
+            hash: filename.replace('.rule', ''),
+            file: data,
+          });
+          done(null);
+        })
+      }
+
+      //console.log(stdout, stderr);
+      //next(err, opts);
+    })
   },
 
   /* Second level calls: chained in various top level calls */
@@ -68,12 +91,14 @@ module.exports = self = {
   gitInitRules: function(opts, next){
     console.log('git init')
     RUN('git init', {cwd: '../rules/'}, function(err, stdout, stderr){
+      console.log(stdout, stderr);
       next(err, opts);
     })
   },
   gitAddRules: function(opts, next){
     console.log('git add')
-    RUN('git add .', {cwd: '../rules/'}, function(err, stdout, stderr){
+    RUN('git add -A', {cwd: '../rules/'}, function(err, stdout, stderr){
+      console.log(stdout, stderr);
       next(err, opts);
     })
   },
